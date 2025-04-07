@@ -36,6 +36,20 @@ void printTreasure(struct treasure t){
     printf("Value: %d\n", t.val); 
 }
 
+void updateLog(char *id, char *up){
+    char file[30];
+    strcpy(file,id);
+    strcat(file,"/logged_hunt.txt");
+    FILE *lh = fopen(file,"a");
+    if(lh == NULL){
+        perror("eroare deschidere fisier");
+        fclose(lh);
+        return ;
+    }
+    fprintf(lh,up);
+    fclose(lh);
+}
+
 void addHunt(char *id){
     DIR *hunt = opendir(id);
     if(errno == ENOENT){
@@ -45,7 +59,7 @@ void addHunt(char *id){
                 perror("eroare");
                 exit(-1);
             }
-            //logged hunt!!!!
+
         }
     }else if(hunt == NULL){
         perror("eroare deschidere");
@@ -78,6 +92,9 @@ void addHunt(char *id){
         closedir(hunt);
         exit(-1);
     }
+    char up[100];
+    sprintf(up,"Added treasure to %s\n",id);
+    updateLog(id,up);
     close(fd);
     closedir(hunt);
 }
@@ -119,8 +136,12 @@ void listHunt(char *id){
                 perror("eroare inchidere fisier");
                 exit(-1);
             }
+            break;
         }
     }
+    char up[50];
+    sprintf(up,"Listed %s\n",id);
+    updateLog(id,up);
     if(closedir(hunt) == -1){
         perror("eroare inchidere director");
         exit(-1);
@@ -154,9 +175,12 @@ void viewTreasure(char *id, char *t){
                     lseek(fd,-sizeof(data.id),SEEK_CUR);
                     read(fd,&data,sizeof(data));
                     printTreasure(data);
+                    char up[50];
+                    sprintf(up,"Viewed %s from %s\n",t,id);
+                    updateLog(id,up);
                     close(fd);
-                    closedir(hunt);
-                    return;
+                    closedir(hunt); 
+                    return;             
                 }
                 else{
                     lseek(fd,-sizeof(data.id),SEEK_CUR);
@@ -165,9 +189,7 @@ void viewTreasure(char *id, char *t){
             }
             printf("Treasure does not exist\n");
             close(fd);
-            closedir(hunt);
-            return;
         }
     }
-    
+    closedir(hunt);
 }
