@@ -193,3 +193,94 @@ void viewTreasure(char *id, char *t){
     }
     closedir(hunt);
 }
+
+#define MAX 1000
+
+void deleteTreasure(int fd, char *t, char *id, char *str){
+    struct treasure treasures[MAX];
+    int nr = 0;
+    ssize_t n;
+    while((n = read(fd,&treasures[nr],sizeof(struct treasure))) > 0){
+        nr++;
+    }
+    int index = -1;
+    for(int i=0;i<nr;i++){
+        if(strcmp(treasures[i].id,t) == 0){
+            index = i;
+            break;
+        }
+    }
+    if(index == -1){
+        printf("Treasure %s not found\n",t);
+        return ;
+    }
+    for(int i=index;i<nr-1;i++){
+        treasures[i] = treasures[i+1];
+    }
+
+    fd = open(str, O_RDWR | O_TRUNC);
+    if (fd == -1) {
+        perror("Error opening file for writing");
+        return;
+    }
+
+    lseek(fd,0,SEEK_SET);
+    for(int i=0;i<nr-1;i++){
+        if(write(fd,&treasures[i],sizeof(struct treasure)) == -1){
+            perror("eroare scriere in fisier");
+            exit(-1);
+        }
+    }
+    char up[50];
+    sprintf(up,"Deleted %s from %s\n",t,id);
+    updateLog(id,up);
+    //close(fd);
+}
+
+void removeTreasure(char *id, char *t){
+    DIR *hunt;
+    if((hunt = opendir(id)) == NULL){
+        perror("eroare deschidere director");
+        closedir(hunt);
+        exit(-1);
+    }
+
+    char str[260],filename[260];
+    struct dirent *entry;
+    sprintf(filename,"%s/treasures.dat",id);
+    while((entry = readdir(hunt))!= NULL){
+        sprintf(str, "%s/%s", id, entry->d_name);
+        if(strcmp(filename,str) == 0){
+            int fd = open(str,O_RDWR);
+            if(fd == -1){
+                perror("eroare deschidere fisier");
+                close(fd);
+                closedir(hunt);
+                exit(-1);
+            }
+            deleteTreasure(fd,t,id,str);
+            close(fd);
+        }
+    }
+    closedir(hunt);
+}
+
+void removeHunt(char *id){
+    DIR *hunt;
+    if((hunt = opendir(id)) == NULL){
+        perror("eroare deschidere director");
+        closedir(hunt);
+        exit(-1);
+    }
+    struct dirent *entry;
+    char str[260];
+    while((entry = readdir(hunt))!= NULL){
+        sprintf(str, "%s/%s", id, entry->d_name);
+        remove(str);
+    }
+    closedir(hunt);
+    if(rmdir(id) == -1){
+        perror("eroare stergere fisier");
+        exit(-1);
+    }
+}

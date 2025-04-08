@@ -35,9 +35,17 @@ int main(int argc, char **argv){
             break;
         }
         case rt:{
+            if(argc == 4)
+                removeTreasure(argv[2],argv[3]);
+            else
+                printf("Wrong number of arguments\n");
             break;
         }
         case rh:{
+            if(argc == 3)
+                removeHunt(argv[2]);
+            else
+                printf("Wrong number of arguments\n");
             break;
         }
         case not:{

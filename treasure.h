@@ -27,5 +27,9 @@ void listHunt(char *id);
 
 void viewTreasure(char *id, char *t);
 
+void removeTreasure(char *id, char *t);
+
+void removeHunt(char *id);
+
 #endif
 
