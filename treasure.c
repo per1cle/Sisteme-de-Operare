@@ -3,7 +3,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-//#define _POSIX_SOURCE
+#define _POSIX1_SOURCE 2
+#define _POSIX_SOURCE 1
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -53,13 +54,15 @@ void updateLog(char *id, char *up){
 void addHunt(char *id){
     DIR *hunt = opendir(id);
     if(errno == ENOENT){
-        if(mkdir(id,0744)){
-            hunt = opendir(id);
+        if(mkdir(id,0744) == -1){
+            /*hunt = opendir(id);
             if(hunt == NULL){
                 perror("eroare");
                 exit(-1);
-            }
-
+            }*/
+            //???????????????
+            perror("eroare creare director");
+            exit(-1);
         }
     }else if(hunt == NULL){
         perror("eroare deschidere");
@@ -95,6 +98,15 @@ void addHunt(char *id){
     char up[100];
     sprintf(up,"Added treasure to %s\n",id);
     updateLog(id,up);
+    char path1[256],path2[256];
+    snprintf(path2,sizeof(path2),"./logged_hunt-%s",id);
+    snprintf(path1,sizeof(path1),"./%s/logged_hunt.txt",id);
+    unlink(path2);
+    if(symlink(path1,path2) == -1){
+        perror("eroare link");
+        printf("errno: %d\n", errno);
+        exit(-1);
+    }
     close(fd);
     closedir(hunt);
 }
@@ -272,6 +284,9 @@ void removeHunt(char *id){
         closedir(hunt);
         exit(-1);
     }
+    char path2[256];
+    snprintf(path2,sizeof(path2),"./logged_hunt-%s",id);
+    unlink(path2);
     struct dirent *entry;
     char str[260];
     while((entry = readdir(hunt))!= NULL){
