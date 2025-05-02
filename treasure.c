@@ -55,12 +55,6 @@ void addHunt(char *id){
     DIR *hunt = opendir(id);
     if(errno == ENOENT){
         if(mkdir(id,0744) == -1){
-            /*hunt = opendir(id);
-            if(hunt == NULL){
-                perror("eroare");
-                exit(-1);
-            }*/
-            //???????????????
             perror("eroare creare director");
             exit(-1);
         }
@@ -141,9 +135,12 @@ void listHunt(char *id){
                 exit(-1);
             }
             struct treasure data;
+            int c=0;
             while(read(fd,&data,sizeof(data)) == sizeof(data)){
+                c++;
                 printTreasure(data);
             }
+            printf("Number of treasures: %d\n",c);
             if(close(fd) == -1){
                 perror("eroare inchidere fisier");
                 exit(-1);
