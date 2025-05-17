@@ -2,9 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include "treasure.h"
 
+
 int main(int argc, char **argv){
+
     if(argc < 2){
         printf("Wrong number of arguments\n");
         return 0;

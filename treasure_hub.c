@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,6 +13,9 @@
 
 pid_t monitor_pid = -1;
 
+pid_t reader_pid = -1;
+int monitor_pipe[2];
+
 void create_fifo() {
     if (mkfifo(FIFO_NAME, 0666) == -1) {
         perror("mkfifo");
@@ -23,14 +27,41 @@ void start_monitor(){
         printf("Monitor already running.\n");
         return;
     }
+
+    if (pipe(monitor_pipe) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+
     if((monitor_pid = fork()) < 0){
         perror("eroare fork");
         exit(-1);
     }
     if(monitor_pid == 0){
+
+        close(monitor_pipe[0]); 
+        dup2(monitor_pipe[1], STDOUT_FILENO);
+        dup2(monitor_pipe[1], STDERR_FILENO);
+        close(monitor_pipe[1]);
+
+
         execlp("./monitor","monitor",NULL);
         perror("eroare execlp");
         exit(-1);
+    }
+    close(monitor_pipe[1]); 
+
+    reader_pid = fork();
+    if (reader_pid == 0) {
+        char buffer[1024];
+        ssize_t n;
+        while ((n = read(monitor_pipe[0], buffer, sizeof(buffer) - 1)) > 0) {
+            buffer[n] = '\0';
+            printf("[Monitor Output] %s", buffer);
+            fflush(stdout);
+        }
+        close(monitor_pipe[0]);
+        exit(0);
     }
 }
 
@@ -45,6 +76,9 @@ void stop_monitor(){
     waitpid(monitor_pid, &status, 0); 
     printf("Monitor exited with status %d\n", status);
     monitor_pid = -1;
+
+    kill(reader_pid, SIGTERM);
+    waitpid(reader_pid, NULL, 0);
 }
 
 void send_signal(int sig) {
@@ -86,6 +120,8 @@ void send_signal(int sig) {
         perror("write to FIFO");
     } 
     close(fd);
+
+
 }
 
 #define MAX_HUNTS 100
@@ -100,22 +136,18 @@ typedef struct {
 UserScore user_scores[MAX_USERS];
 int user_count = 0;
 
-int starts_with(const char *str, const char *prefix) {
-    return strncmp(str, prefix, strlen(prefix)) == 0;
-}
-
 void add_score(const char* username, int score) {
     for (int i = 0; i < user_count; i++) {
-        if (strcmp(user_scores[i].username, username) == 0) {
+        if (strcmp(user_scores[i].username, username) == 0) {     //daca gaseste userul in vect, ii creste scorul total
             user_scores[i].total_score += score;
             return;
         }
     }
-    // Not found, add new
+    //daca nu gaseste userul in vector il adauga
     if (user_count < MAX_USERS) {
         strncpy(user_scores[user_count].username, username, sizeof(user_scores[user_count].username));
         user_scores[user_count].total_score = score;
-        user_count++;
+        user_count++;           
     }
 }
 
@@ -193,8 +225,9 @@ void calculate_score() {
 int main(){
     create_fifo();
     char command[256];
-    printf("Enter command:\n(start_monitor, list_hunts, list_treasures, view_treasures, stop_monitor, calculate_score, exit)\n");
+    printf("Enter command:\n(start_monitor, list_hunts, list_treasures, view_treasure, stop_monitor, calculate_score, exit)\n");
     while (1) {
+        printf("hub >> ");
         if (!fgets(command, sizeof(command), stdin))
             break;
         command[strcspn(command, "\n")] = 0;
